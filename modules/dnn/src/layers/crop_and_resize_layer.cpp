@@ -40,17 +40,19 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-        Mat& inp = *inputs[0];
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        Mat boxes = inputs[1]->reshape(1, inputs[1]->total() / 7);
+        Mat boxes = inputs[1].reshape(1, inputs[1].total() / 7);
         const int numChannels = inp.size[1];
         const int inpHeight = inp.size[2];
         const int inpWidth = inp.size[3];
@@ -98,6 +100,13 @@ public:
                     }
                 }
             }
+        }
+        if (boxes.rows < out.size[0])
+        {
+            // left = top = right = bottom = 0
+            std::vector<cv::Range> dstRanges(4, Range::all());
+            dstRanges[0] = Range(boxes.rows, out.size[0]);
+            out(dstRanges).setTo(inp.ptr<float>(0, 0, 0)[0]);
         }
     }
 

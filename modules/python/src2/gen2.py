@@ -10,6 +10,8 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO
 
+forbidden_arg_types = ["void*"]
+
 ignored_arg_types = ["RNG*"]
 
 pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
@@ -70,25 +72,29 @@ static void pyopencv_${name}_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
-template<> PyObject* pyopencv_from(const ${cname}& r)
+template<>
+struct PyOpenCV_Converter< ${cname} >
 {
-    pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    new (&m->v) ${cname}(r); //Copy constructor
-    return (PyObject*)m;
-}
-
-template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name)
-{
-    if(!src || src == Py_None)
-        return true;
-    if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+    static PyObject* from(const ${cname}& r)
     {
-        dst = ((pyopencv_${name}_t*)src)->v;
-        return true;
+        pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+        new (&m->v) ${cname}(r); //Copy constructor
+        return (PyObject*)m;
     }
-    failmsg("Expected ${cname} for argument '%%s'", name);
-    return false;
-}
+
+    static bool to(PyObject* src, ${cname}& dst, const char* name)
+    {
+        if(!src || src == Py_None)
+            return true;
+        if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+        {
+            dst = ((pyopencv_${name}_t*)src)->v;
+            return true;
+        }
+        failmsg("Expected ${cname} for argument '%%s'", name);
+        return false;
+    }
+};
 """ % head_init_str)
 
 gen_template_mappable = Template("""
@@ -121,27 +127,31 @@ static void pyopencv_${name}_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
-template<> PyObject* pyopencv_from(const Ptr<${cname}>& r)
+template<>
+struct PyOpenCV_Converter< Ptr<${cname}> >
 {
-    pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
-    m->v = r;
-    return (PyObject*)m;
-}
-
-template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
-{
-    if(!src || src == Py_None)
-        return true;
-    if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+    static PyObject* from(const Ptr<${cname}>& r)
     {
-        dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
-        return true;
+        pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+        new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
+        m->v = r;
+        return (PyObject*)m;
     }
-    ${mappable_code}
-    failmsg("Expected ${cname} for argument '%%s'", name);
-    return false;
-}
+
+    static bool to(PyObject* src, Ptr<${cname}>& dst, const char* name)
+    {
+        if(!src || src == Py_None)
+            return true;
+        if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+        {
+            dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
+            return true;
+        }
+        ${mappable_code}
+        failmsg("Expected ${cname} for argument '%%s'", name);
+        return false;
+    }
+};
 
 """ % head_init_str)
 
@@ -475,6 +485,7 @@ class FuncVariant(object):
             argno += 1
             if a.name in self.array_counters:
                 continue
+            assert not a.tp in forbidden_arg_types, 'Forbidden type "{}" for argument "{}" in "{}" ("{}")'.format(a.tp, a.name, self.name, self.classname)
             if a.tp in ignored_arg_types:
                 continue
             if a.returnarg:
@@ -534,13 +545,13 @@ class FuncVariant(object):
 
 
 class FuncInfo(object):
-    def __init__(self, classname, name, cname, isconstructor, namespace, isclassmethod):
+    def __init__(self, classname, name, cname, isconstructor, namespace, is_static):
         self.classname = classname
         self.name = name
         self.cname = cname
         self.isconstructor = isconstructor
         self.namespace = namespace
-        self.isclassmethod = isclassmethod
+        self.is_static = is_static
         self.variants = []
 
     def add_variant(self, decl, isphantom=False):
@@ -555,8 +566,8 @@ class FuncInfo(object):
         else:
             classname = ""
 
-        if self.isclassmethod:
-            name += "_cls"
+        if self.is_static:
+            name += "_static"
 
         return "pyopencv_" + self.namespace.replace('.','_') + '_' + classname + name
 
@@ -615,7 +626,7 @@ class FuncInfo(object):
 
         return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags), "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
-                                     flags = 'METH_CLASS' if self.isclassmethod else '0', py_docstring = full_docstring)
+                                     flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
     def gen_code(self, codegen):
         all_classes = codegen.classes
@@ -632,7 +643,7 @@ class FuncInfo(object):
             selfinfo = all_classes[self.classname]
             if not self.isconstructor:
                 amp = "&" if selfinfo.issimple else ""
-                if self.isclassmethod:
+                if self.is_static:
                     pass
                 elif selfinfo.isalgorithm:
                     code += gen_template_check_self_algo.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
@@ -652,7 +663,7 @@ class FuncInfo(object):
             all_cargs = []
             parse_arglist = []
 
-            if v.isphantom and ismethod and not self.isclassmethod:
+            if v.isphantom and ismethod and not self.is_static:
                 code_args += "_self_"
 
             # declare all the C function arguments,
@@ -663,7 +674,7 @@ class FuncInfo(object):
                 if a.tp in ignored_arg_types:
                     defval = a.defval
                     if not defval and a.tp.endswith("*"):
-                        defval = 0
+                        defval = "0"
                     assert defval
                     if not code_args.endswith("("):
                         code_args += ", "
@@ -680,7 +691,7 @@ class FuncInfo(object):
                         defval0 = "0"
                         tp1 = tp.replace("*", "_ptr")
                 tp_candidates = [a.tp, normalize_class_name(self.namespace + "." + a.tp)]
-                if any(tp in codegen.enum_types for tp in tp_candidates):
+                if any(tp in codegen.enums.keys() for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", defval0))
@@ -740,7 +751,7 @@ class FuncInfo(object):
                 if v.rettype:
                     code_decl += "    " + v.rettype + " retval;\n"
                     code_fcall += "retval = "
-                if ismethod and not self.isclassmethod:
+                if not v.isphantom and ismethod and not self.is_static:
                     code_fcall += "_self_->" + self.cname
                 else:
                     code_fcall += self.cname
@@ -821,7 +832,7 @@ class FuncInfo(object):
             #if dump: pprint(vars(classinfo))
             if self.isconstructor:
                 py_name = 'cv.' + classinfo.wname
-            elif self.isclassmethod:
+            elif self.is_static:
                 py_name = '.'.join([self.namespace, classinfo.sname + '_' + self.variants[0].wname])
             else:
                 cname = classinfo.cname + '::' + cname
@@ -855,8 +866,9 @@ class PythonWrapperGenerator(object):
         self.classes = {}
         self.namespaces = {}
         self.consts = {}
-        self.enum_types = []
+        self.enums = {}
         self.code_include = StringIO()
+        self.code_enums = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
         self.code_type_reg = StringIO()
@@ -914,8 +926,16 @@ class PythonWrapperGenerator(object):
         #print(cname + ' => ' + str(py_name) + ' (value=' + value + ')')
 
     def add_enum(self, name, decl):
-        enumname = normalize_class_name(name)
-        self.enum_types.append(enumname)
+        wname = normalize_class_name(name)
+        if wname.endswith("<unnamed>"):
+            wname = None
+        else:
+            self.enums[wname] = name
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            name = decl[0]
+            self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
@@ -929,12 +949,12 @@ class PythonWrapperGenerator(object):
         namespace = '.'.join(namespace)
 
         isconstructor = name == bareclassname
-        isclassmethod = False
+        is_static = False
         isphantom = False
         mappable = None
         for m in decl[2]:
             if m == "/S":
-                isclassmethod = True
+                is_static = True
             elif m == "/phantom":
                 isphantom = True
                 cname = cname.replace("::", "_")
@@ -948,10 +968,10 @@ class PythonWrapperGenerator(object):
         if isconstructor:
             name = "_".join(classes[:-1]+[name])
 
-        if isclassmethod:
+        if is_static:
             # Add it as a method to the class
             func_map = self.classes[classname].methods
-            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, isclassmethod))
+            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
             func.add_variant(decl, isphantom)
 
             # Add it as global function
@@ -961,12 +981,13 @@ class PythonWrapperGenerator(object):
             func.add_variant(decl, isphantom)
         else:
             if classname and not isconstructor:
-                cname = barename
+                if not isphantom:
+                    cname = barename
                 func_map = self.classes[classname].methods
             else:
                 func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
 
-            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, isclassmethod))
+            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
             func.add_variant(decl, isphantom)
 
         if classname and isconstructor:
@@ -986,10 +1007,10 @@ class PythonWrapperGenerator(object):
 
         self.code_ns_reg.write('static ConstDef consts_%s[] = {\n'%wname)
         for name, cname in sorted(ns.consts.items()):
-            self.code_ns_reg.write('    {"%s", %s},\n'%(name, cname))
+            self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(name, cname))
             compat_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).upper()
             if name != compat_name:
-                self.code_ns_reg.write('    {"%s", %s},\n'%(compat_name, cname))
+                self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(compat_name, cname))
         self.code_ns_reg.write('    {NULL, 0}\n};\n\n')
 
     def gen_namespaces_reg(self):
@@ -1000,6 +1021,21 @@ class PythonWrapperGenerator(object):
                 self.code_ns_reg.write('  init_submodule(root, MODULESTR"%s", methods_%s, consts_%s);\n' % (ns_name[2:], wname, wname))
         self.code_ns_reg.write('};\n')
 
+    def gen_enum_reg(self, enum_name):
+        name_seg = enum_name.split(".")
+        is_enum_class = False
+        if len(name_seg) >= 2 and name_seg[-1] == name_seg[-2]:
+            enum_name = ".".join(name_seg[:-1])
+            is_enum_class = True
+
+        wname = normalize_class_name(enum_name)
+        cname = enum_name.replace(".", "::")
+
+        code = ""
+        if re.sub(r"^cv\.", "", enum_name) != wname:
+            code += "typedef {0} {1};\n".format(cname, wname)
+        code += "CV_PY_FROM_ENUM({0});\nCV_PY_TO_ENUM({0});\n\n".format(wname)
+        self.code_enums.write(code)
 
     def save(self, path, name, buf):
         with open(path + "/" + name, "wt") as f:
@@ -1019,7 +1055,8 @@ class PythonWrapperGenerator(object):
             decls = self.parser.parse(hdr)
             if len(decls) == 0:
                 continue
-            self.code_include.write( '#include "{0}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
+            if hdr.find('opencv2/') >= 0: #Avoid including the shadow files
+                self.code_include.write( '#include "{0}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -1033,7 +1070,7 @@ class PythonWrapperGenerator(object):
                     self.add_const(name.replace("const ", "").strip(), decl)
                 elif name.startswith("enum"):
                     # enum
-                    self.add_enum(name.replace("enum ", "").strip(), decl)
+                    self.add_enum(name.rsplit(" ", 1)[1], decl)
                 else:
                     # function
                     self.add_func(decl)
@@ -1113,7 +1150,13 @@ class PythonWrapperGenerator(object):
             self.gen_namespace(ns_name)
         self.gen_namespaces_reg()
 
-        # step 4: generate the code for constants
+        # step 4: generate the code for enum types
+        enumlist = list(self.enums.values())
+        enumlist.sort()
+        for name in enumlist:
+            self.gen_enum_reg(name)
+
+        # step 5: generate the code for constants
         constlist = list(self.consts.items())
         constlist.sort()
         for name, constinfo in constlist:
@@ -1122,6 +1165,7 @@ class PythonWrapperGenerator(object):
         # That's it. Now save all the files
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
+        self.save(output_path, "pyopencv_generated_enums.h", self.code_enums)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
@@ -1134,6 +1178,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = [f.strip() for f in open(sys.argv[2], 'r').readlines()]
+        with open(sys.argv[2], 'r') as f:
+            srcfiles = [l.strip() for l in f.readlines()]
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)

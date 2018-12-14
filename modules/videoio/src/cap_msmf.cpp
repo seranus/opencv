@@ -99,9 +99,7 @@ static void init_MFCreateDXGIDeviceManager()
     pMFCreateDXGIDeviceManager_initialized = true;
 }
 #endif
-#if (WINVER >= 0x0602) // Available since Win 8
-#pragma comment(lib, "MinCore_Downlevel")
-#endif
+#pragma comment(lib, "Shlwapi.lib")
 #endif
 
 #include <mferror.h>
@@ -114,6 +112,11 @@ struct IMFMediaType;
 struct IMFActivate;
 struct IMFMediaSource;
 struct IMFAttributes;
+
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
 namespace
 {
@@ -616,7 +619,7 @@ class SourceReaderCB : public IMFSourceReaderCallback
 {
 public:
     SourceReaderCB() :
-        m_nRefCount(1), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_dwStreamIndex(0)
+        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0)
     {
     }
 
@@ -677,7 +680,7 @@ public:
     BOOL                m_bEOS;
     HRESULT             m_hrStatus;
 
-    _ComPtr<IMFSourceReader> m_reader;
+    IMFSourceReader *m_reader;
     DWORD m_dwStreamIndex;
     _ComPtr<IMFSample>  m_lastSample;
 };
@@ -701,10 +704,10 @@ public:
     virtual bool grabFrame() CV_OVERRIDE;
     virtual bool retrieveFrame(int, cv::OutputArray) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
 protected:
     double getFramerate(MediaType MT) const;
-    bool configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, int outFormat, bool convertToFormat);
+    bool configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, cv::uint32_t outFormat, bool convertToFormat);
     bool setTime(double time, bool rough);
     bool configureHW(bool enable);
 
@@ -720,7 +723,7 @@ protected:
     DWORD dwStreamIndex;
     MediaType nativeFormat;
     MediaType captureFormat;
-    int outputFormat;
+    cv::uint32_t outputFormat;
     UINT32 requestedWidth, requestedHeight;
     bool convertFormat;
     UINT32 aspectN, aspectD;
@@ -836,7 +839,7 @@ static UINT32 resolutionDiff(MediaType& mType, UINT32 refWidth, UINT32 refHeight
 { return UDIFF(mType.width, refWidth) + UDIFF(mType.height, refHeight); }
 #undef UDIFF
 
-bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, int outFormat, bool convertToFormat)
+bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, cv::uint32_t outFormat, bool convertToFormat)
 {
     if (width != 0 && height != 0 &&
         width == captureFormat.width && height == captureFormat.height && prefFramerate == getFramerate(nativeFormat) &&
@@ -1140,7 +1143,7 @@ bool CvCapture_MSMF::grabFrame()
         if (!reader->m_reader)
         {
             // Initiate capturing with async callback
-            reader->m_reader = videoFileSource;
+            reader->m_reader = videoFileSource.Get();
             reader->m_dwStreamIndex = dwStreamIndex;
             if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
             {
@@ -1375,8 +1378,6 @@ double CvCapture_MSMF::getProperty( int property_id ) const
     if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_FORMAT:
-                return outputFormat;
         case CV_CAP_PROP_MODE:
                 return captureMode;
         case CV_CAP_PROP_CONVERT_RGB:
@@ -1687,7 +1688,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
             default:
                 return false;
             }
-        case CV_CAP_PROP_FORMAT:
+        case CV_CAP_PROP_FOURCC:
             return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, (int)cvRound(value), convertFormat);
         case CV_CAP_PROP_CONVERT_RGB:
             return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, value != 0);
@@ -1710,8 +1711,6 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
         case CV_CAP_PROP_FPS:
             if (value >= 0)
                 return configureOutput(requestedWidth, requestedHeight, value, aspectN, aspectD, outputFormat, convertFormat);
-            break;
-        case CV_CAP_PROP_FOURCC:
             break;
         case CV_CAP_PROP_FRAME_COUNT:
             break;
@@ -1955,6 +1954,7 @@ public:
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const { return initiated; }
 
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_MSMF; }
 private:
     Media_Foundation& MF;
     UINT32 videoWidth;
