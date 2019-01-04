@@ -74,7 +74,7 @@
 
 using namespace emscripten;
 using namespace cv;
-using namespace dnn;
+// using namespace dnn;
 
 namespace binding_utils
 {
