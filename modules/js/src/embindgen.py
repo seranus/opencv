@@ -173,6 +173,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
+# white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo])
 white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo])
 
 # Features to be exported
