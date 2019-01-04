@@ -137,7 +137,8 @@ private:
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
 
 #ifdef HAVE_VULKAN
-        backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));  // TODO Add device check
+        if (haveVulkan())
+            backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
 #endif
     }
     static inline bool checkIETarget(int target)
@@ -1502,32 +1503,6 @@ struct Net::Impl
             if (!layer->supportBackend(preferableBackend))
             {
                 continue;
-            }
-
-            if (ld.type == "Convolution")
-            {
-                std::vector<MatShape> in_shapes;
-                std::vector<MatShape> out_shapes;
-                CV_Assert(ld.inputBlobs.size() == ld.outputBlobs.size());
-
-                for (int i = 0; i < ld.inputBlobs.size(); i++)
-                {
-                    in_shapes.push_back(shape(*ld.inputBlobs[i]));
-                    out_shapes.push_back(shape(ld.outputBlobs[i]));
-                }
-                int64 flops = layer->getFLOPS(in_shapes, out_shapes);
-                // FIXME
-                //
-                // This is a workaround for GPU hang on heavy convolution workload ( > 10 GFLOPS).
-                // For the long time task, vkWaitForFences() return without error but next call on
-                // vkQueueSubmit() return -4, i.e. "VK_ERROR_DEVICE_LOST" and driver reports GPU hang.
-                //
-                // Need more investigation on root cause of GPU hang and need to optimize convolution shader
-                // to reduce process time.
-                if (flops > CV_BIG_INT(10) * 1000 * 1000 * 1000)
-                {
-                    continue;
-                }
             }
 
             ld.skip = false;
