@@ -162,6 +162,18 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
                inp, "detection_out", "", diffScores);
 }
 
+TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
+    float diffScores  = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.029 : 0.0;
+    float diffSquares = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09  : 0.0;
+    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
+               inp, "detection_out", "", diffScores, diffSquares);
+}
+
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
@@ -174,13 +186,25 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
                inp, "detection_out", "", l1, lInf);
 }
 
+TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 0.0;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
+    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
+               inp, "detection_out", "", l1, lInf);
+}
+
 TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 0.0;
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 2e-5;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.062 : 0.0;
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "dnn/ssd_mobilenet_v2_coco_2018_03_29.pbtxt",
                inp, "detection_out", "", l1, lInf, 0.25);
@@ -288,7 +312,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
     // Output image has values in range [-143.526, 148.539].
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.3 : 4e-5;
-    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7.0 : 2e-3;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7.28 : 2e-3;
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", "", l1, lInf);
 }
 

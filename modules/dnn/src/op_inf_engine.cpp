@@ -18,6 +18,10 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
+#else
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
 
@@ -40,6 +44,7 @@ void InfEngineBackendNode::connect(std::vector<Ptr<BackendWrapper> >& inputs,
     layer->outData[0] = dataPtr;
     dataPtr->creatorLayer = InferenceEngine::CNNLayerWeakPtr(layer);
 }
+#endif
 
 static std::vector<Ptr<InfEngineBackendWrapper> >
 infEngineWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
@@ -53,6 +58,129 @@ infEngineWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
     }
     return wrappers;
 }
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+
+InfEngineBackendNet::InfEngineBackendNet() : netBuilder("")
+{
+    hasNetOwner = false;
+    targetDevice = InferenceEngine::TargetDevice::eCPU;
+}
+
+InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net) : netBuilder(""), cnn(net)
+{
+    hasNetOwner = true;
+    targetDevice = InferenceEngine::TargetDevice::eCPU;
+}
+
+void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                  const std::vector<Ptr<BackendWrapper> >& outputs,
+                                  const std::string& layerName)
+{
+    std::vector<Ptr<InfEngineBackendWrapper> > inpWrappers = infEngineWrappers(inputs);
+    std::map<std::string, int>::iterator it = layers.find(layerName);
+    CV_Assert(it != layers.end());
+
+    const int layerId = it->second;
+    for (size_t i = 0; i < inpWrappers.size(); ++i)
+    {
+        const auto& inp = inpWrappers[i];
+        const std::string& inpName = inp->dataPtr->name;
+        int inpId;
+        it = layers.find(inpName);
+        if (it == layers.end())
+        {
+            InferenceEngine::Builder::InputLayer inpLayer(inpName);
+
+            std::vector<size_t> shape(inp->blob->dims());
+            std::reverse(shape.begin(), shape.end());
+
+            inpLayer.setPort(InferenceEngine::Port(shape));
+            inpId = netBuilder.addLayer(inpLayer);
+
+            layers.insert({inpName, inpId});
+        }
+        else
+            inpId = it->second;
+
+        netBuilder.connect((size_t)inpId, {(size_t)layerId, i});
+        unconnectedLayersIds.erase(inpId);
+    }
+    CV_Assert(!outputs.empty());
+    InferenceEngine::DataPtr dataPtr = infEngineDataNode(outputs[0]);
+    dataPtr->name = layerName;
+}
+
+void InfEngineBackendNet::init(int targetId)
+{
+    if (!hasNetOwner)
+    {
+        CV_Assert(!unconnectedLayersIds.empty());
+        for (int id : unconnectedLayersIds)
+        {
+            InferenceEngine::Builder::OutputLayer outLayer("myconv1");
+            netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
+        }
+        cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
+    }
+
+    switch (targetId)
+    {
+    case DNN_TARGET_CPU:
+        targetDevice = InferenceEngine::TargetDevice::eCPU;
+        break;
+    case DNN_TARGET_OPENCL: case DNN_TARGET_OPENCL_FP16:
+        targetDevice = InferenceEngine::TargetDevice::eGPU;
+        break;
+    case DNN_TARGET_MYRIAD:
+        targetDevice = InferenceEngine::TargetDevice::eMYRIAD;
+        break;
+    case DNN_TARGET_FPGA:
+        targetDevice = InferenceEngine::TargetDevice::eFPGA;
+        break;
+    default:
+        CV_Error(Error::StsError, format("Unknown target identifier: %d", targetId));
+    }
+
+    for (const auto& name : requestedOutputs)
+    {
+        cnn.addOutput(name);
+    }
+
+    for (const auto& it : cnn.getInputsInfo())
+    {
+        const std::string& name = it.first;
+        auto blobIt = allBlobs.find(name);
+        CV_Assert(blobIt != allBlobs.end());
+        inpBlobs[name] = blobIt->second;
+        it.second->setPrecision(blobIt->second->precision());
+    }
+    for (const auto& it : cnn.getOutputsInfo())
+    {
+        const std::string& name = it.first;
+        auto blobIt = allBlobs.find(name);
+        CV_Assert(blobIt != allBlobs.end());
+        outBlobs[name] = blobIt->second;
+        it.second->setPrecision(blobIt->second->precision());  // Should be always FP32
+    }
+
+    initPlugin(cnn);
+}
+
+void InfEngineBackendNet::addLayer(const InferenceEngine::Builder::Layer& layer)
+{
+    int id = netBuilder.addLayer(layer);
+    const std::string& layerName = layer.getName();
+    CV_Assert(layers.insert({layerName, id}).second);
+    unconnectedLayersIds.insert(id);
+}
+
+void InfEngineBackendNet::addOutput(const std::string& name)
+{
+    requestedOutputs.push_back(name);
+}
+
+#endif  // IE >= R5
 
 static InferenceEngine::Layout estimateLayout(const Mat& m)
 {
@@ -148,6 +276,7 @@ void InfEngineBackendWrapper::setHostDirty()
 
 }
 
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
 InfEngineBackendNet::InfEngineBackendNet()
 {
     targetDevice = InferenceEngine::TargetDevice::eCPU;
@@ -491,7 +620,13 @@ void InfEngineBackendNet::init(int targetId)
         initPlugin(*this);
 }
 
-static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+#endif  // IE < R5
+
+static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
+{
+    static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+    return sharedPlugins;
+}
 
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
@@ -499,6 +634,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 
     try
     {
+        AutoLock lock(getInitializationMutex());
+        auto& sharedPlugins = getSharedPlugins();
         auto pluginIt = sharedPlugins.find(targetDevice);
         if (pluginIt != sharedPlugins.end())
         {
@@ -566,7 +703,11 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     auto wrappers = infEngineWrappers(ptrs);
     for (const auto& wrapper : wrappers)
     {
-        allBlobs.insert({wrapper->dataPtr->name, wrapper->blob});
+        std::string name = wrapper->dataPtr->name;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        name = name.empty() ? "id1" : name;  // TODO: drop the magic input name.
+#endif
+        allBlobs.insert({name, wrapper->blob});
     }
 }
 
@@ -583,19 +724,33 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     return Mat(size, CV_32F, (void*)blob->buffer());
 }
 
-InfEngineBackendLayer::InfEngineBackendLayer(const InferenceEngine::DataPtr& output_)
-{
-    output = output_;
-}
-
 bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             const int requiredOutputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
-    std::vector<size_t> dims = output->dims;
-    std::vector<int> shape(dims.rbegin(), dims.rend());
-    outputs.assign(1, shape);
+    InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
+    InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
+    bool equal_flag = true;
+    size_t i = 0;
+    for (itr = inShapes.begin(); itr != inShapes.end(); ++itr)
+    {
+        InferenceEngine::SizeVector currentInShape(inputs[i].begin(), inputs[i].end());
+        if (itr->second != currentInShape)
+        {
+            itr->second = currentInShape;
+            equal_flag = false;
+        }
+        i++;
+    }
+
+    if (!equal_flag)
+    {
+        InferenceEngine::CNNNetwork curr_t_net(t_net);
+        curr_t_net.reshape(inShapes);
+    }
+    std::vector<size_t> dims = t_net.getOutputsInfo()[name]->getDims();
+    outputs.push_back(MatShape(dims.begin(), dims.end()));
     return false;
 }
 
@@ -648,7 +803,8 @@ CV__DNN_INLINE_NS_BEGIN
 void resetMyriadDevice()
 {
 #ifdef HAVE_INF_ENGINE
-    sharedPlugins.erase(InferenceEngine::TargetDevice::eMYRIAD);
+    AutoLock lock(getInitializationMutex());
+    getSharedPlugins().erase(InferenceEngine::TargetDevice::eMYRIAD);
 #endif  // HAVE_INF_ENGINE
 }
 

@@ -112,7 +112,7 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'goodFeaturesToTrack','grabCut','initUndistortRectifyMap', 'integral','integral2', 'isContourConvex', 'line', \
                 'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
-                'undistort','warpAffine','warpPerspective','watershed', 'fillConvexPoly'],
+                'undistort','warpAffine','warpPerspective','watershed', 'fillConvexPoly', 'invertAffineTransform'],
            'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
 
 objdetect = {'': ['groupRectangles'],
@@ -140,7 +140,7 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
               'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
               'BFMatcher': ['isMaskSupported', 'create'],
-              '': ['FAST', 'AGAST', 'drawKeypoints', 'drawMatches']}
+              '': ['drawKeypoints', 'drawMatches']}
 
 photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
               'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
@@ -163,6 +163,13 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
                              'getColorAdaptation', 'setColorAdaptation']
         }
 
+# aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
+#         'aruco_Dictionary': ['get', 'drawMarker'],
+#         'aruco_Board': ['create'],
+#         'aruco_GridBoard': ['create', 'draw'],
+#         'aruco_CharucoBoard': ['create', 'draw'],
+#         }
+
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
@@ -173,8 +180,8 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-# white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo])
 white_list = makeWhiteList([core, imgproc, objdetect, video, features2d, photo])
+#white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco])
 
 # Features to be exported
 export_enums = False
