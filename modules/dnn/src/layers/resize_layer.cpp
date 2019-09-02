@@ -54,12 +54,11 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            return (interpolation == "nearest" && preferableTarget != DNN_TARGET_MYRIAD) ||
-                   (interpolation == "bilinear" && INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R4));
+            return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
+                   (interpolation == "bilinear");
         }
-        else
 #endif
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -163,7 +162,6 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         if (interpolation == "nearest")
@@ -173,7 +171,7 @@ public:
             ieLayer.getParameters()["antialias"] = false;
             if (scaleWidth != scaleHeight)
                 CV_Error(Error::StsNotImplemented, "resample with sw != sh");
-            ieLayer.getParameters()["factor"] = 1.0 / scaleWidth;
+            ieLayer.getParameters()["factor"] = 1.0f / scaleWidth;
         }
         else if (interpolation == "bilinear")
         {
@@ -189,32 +187,6 @@ public:
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer;
-        if (interpolation == "nearest")
-        {
-            lp.type = "Resample";
-            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
-            ieLayer->params["type"] = "caffe.ResampleParameter.NEAREST";
-            ieLayer->params["antialias"] = "0";
-        }
-        else if (interpolation == "bilinear")
-        {
-            lp.type = "Interp";
-            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
-            ieLayer->params["pad_beg"] = "0";
-            ieLayer->params["pad_end"] = "0";
-            ieLayer->params["align_corners"] = "0";
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
-        ieLayer->params["width"] = cv::format("%d", outWidth);
-        ieLayer->params["height"] = cv::format("%d", outHeight);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
@@ -272,10 +244,9 @@ public:
         scaleWidth = (outWidth > 1) ? (static_cast<float>(inpWidth - 1) / (outWidth - 1)) : 0.f;
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         ieLayer.setType("Interp");
@@ -286,20 +257,9 @@ public:
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Interp";
-        lp.precision = InferenceEngine::Precision::FP32;
-
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-        ieLayer->params["pad_beg"] = "0";
-        ieLayer->params["pad_end"] = "0";
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
+
 };
 
 Ptr<Layer> InterpLayer::create(const LayerParams& params)
