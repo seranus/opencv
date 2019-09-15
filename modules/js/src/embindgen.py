@@ -115,53 +115,53 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'undistort','warpAffine','warpPerspective','watershed', 'fillConvexPoly', 'invertAffineTransform', 'fillPoly'],
            'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
 
-objdetect = {'': ['groupRectangles'],
-             'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
-             'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale']}
+# objdetect = {'': ['groupRectangles'],
+#              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
+#              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale']}
 
-video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', \
-             'findTransformECC', 'meanShift'],
-         'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
-         'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
+# video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', \
+#              'findTransformECC', 'meanShift'],
+#          'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
+#          'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
 
 # dnn = {'dnn_Net': ['setInput', 'forward'],
 #        '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
 #             'readNetFromONNX', 'readNet', 'blobFromImage']}
 
-features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
-              'BRISK': ['create', 'getDefaultName'],
-              'ORB': ['create', 'setMaxFeatures', 'setScaleFactor', 'setNLevels', 'setEdgeThreshold', 'setFirstLevel', 'setWTA_K', 'setScoreType', 'setPatchSize', 'getFastThreshold', 'getDefaultName'],
-              'MSER': ['create', 'detectRegions', 'setDelta', 'getDelta', 'setMinArea', 'getMinArea', 'setMaxArea', 'getMaxArea', 'setPass2Only', 'getPass2Only', 'getDefaultName'],
-              'FastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
-              'AgastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
-              'GFTTDetector': ['create', 'setMaxFeatures', 'getMaxFeatures', 'setQualityLevel', 'getQualityLevel', 'setMinDistance', 'getMinDistance', 'setBlockSize', 'getBlockSize', 'setHarrisDetector', 'getHarrisDetector', 'setK', 'getK', 'getDefaultName'],
-              # 'SimpleBlobDetector': ['create'],
-              'KAZE': ['create', 'setExtended', 'getExtended', 'setUpright', 'getUpright', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
-              'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
-              'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
-              'BFMatcher': ['isMaskSupported', 'create'],
-              '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
+# features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
+#               'BRISK': ['create', 'getDefaultName'],
+#               'ORB': ['create', 'setMaxFeatures', 'setScaleFactor', 'setNLevels', 'setEdgeThreshold', 'setFirstLevel', 'setWTA_K', 'setScoreType', 'setPatchSize', 'getFastThreshold', 'getDefaultName'],
+#               'MSER': ['create', 'detectRegions', 'setDelta', 'getDelta', 'setMinArea', 'getMinArea', 'setMaxArea', 'getMaxArea', 'setPass2Only', 'getPass2Only', 'getDefaultName'],
+#               'FastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
+#               'AgastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
+#               'GFTTDetector': ['create', 'setMaxFeatures', 'getMaxFeatures', 'setQualityLevel', 'getQualityLevel', 'setMinDistance', 'getMinDistance', 'setBlockSize', 'getBlockSize', 'setHarrisDetector', 'getHarrisDetector', 'setK', 'getK', 'getDefaultName'],
+#               # 'SimpleBlobDetector': ['create'],
+#               'KAZE': ['create', 'setExtended', 'getExtended', 'setUpright', 'getUpright', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
+#               'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
+#               'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
+#               'BFMatcher': ['isMaskSupported', 'create'],
+#               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
-              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
-              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
-        'CalibrateCRF': ['process'],
-        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
-                      'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
-        'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
-        'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
-        'MergeExposures' : ['process'],
-        'MergeDebevec' : ['process'],
-        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
-                          'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
-        'MergeRobertson' : ['process'],
-        'Tonemap' : ['process' , 'getGamma', 'setGamma'],
-        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
-                          'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
-        'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
-        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
-                             'getColorAdaptation', 'setColorAdaptation']
-        }
+# photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
+#               'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
+#               'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
+#         'CalibrateCRF': ['process'],
+#         'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
+#                       'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
+#         'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
+#         'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
+#         'MergeExposures' : ['process'],
+#         'MergeDebevec' : ['process'],
+#         'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
+#                           'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
+#         'MergeRobertson' : ['process'],
+#         'Tonemap' : ['process' , 'getGamma', 'setGamma'],
+#         'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
+#                           'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
+#         'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
+#         'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
+#                              'getColorAdaptation', 'setColorAdaptation']
+#         }
 
 # aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'estimatePoseCharucoBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
 #         'aruco_Dictionary': ['get', 'drawMarker'],
