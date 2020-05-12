@@ -115,6 +115,8 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'undistort','warpAffine','warpPerspective','watershed', 'fillConvexPoly', 'invertAffineTransform', 'fillPoly'],
            'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
 
+imencode = {'': ['imdecode']}
+
 # objdetect = {'': ['groupRectangles'],
 #              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
 #              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale']}
@@ -182,8 +184,12 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc])
+white_list = makeWhiteList([core, imgproc, imencode])
 # white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])
+white_list = None
+# defined at platforms\js\opencv_js.config.py
+# exec(open(os.environ["OPENCV_JS_WHITELIST"]).read())
+# assert(white_list)
 
 # Features to be exported
 export_enums = False
