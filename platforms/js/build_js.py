@@ -117,12 +117,12 @@ class Builder:
                "-DBUILD_ZLIB=ON",
                "-DBUILD_opencv_apps=OFF",
                "-DBUILD_opencv_calib3d=ON",
-               "-DBUILD_opencv_dnn=ON",
-               "-DBUILD_opencv_features2d=ON",
+               "-DBUILD_opencv_dnn=OFF",
+               "-DBUILD_opencv_features2d=OFF",
                "-DBUILD_opencv_flann=ON",  # No bindings provided. This module is used as a dependency for other modules.
                "-DBUILD_opencv_gapi=OFF",
                "-DBUILD_opencv_ml=OFF",
-               "-DBUILD_opencv_photo=ON",
+               "-DBUILD_opencv_photo=OFF",
                "-DBUILD_opencv_imgcodecs=OFF",
                "-DBUILD_opencv_shape=OFF",
                "-DBUILD_opencv_videoio=OFF",
@@ -166,6 +166,10 @@ class Builder:
         if flags:
             cmd += ["-DCMAKE_C_FLAGS='%s'" % flags,
                     "-DCMAKE_CXX_FLAGS='%s'" % flags]
+        
+        # for compilation of solvepnp and projected points based on https://github.com/opencv/opencv/issues/15299
+        cmd += ['DOPENCV_EXTRA_MODULES_PATH=~/opencv_contrib/modules']
+
         return cmd
 
     def get_build_flags(self):

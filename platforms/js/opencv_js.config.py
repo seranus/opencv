@@ -76,7 +76,7 @@ aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseS
         'aruco_CharucoBoard': ['create', 'draw'],
         }
 
-calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues']}
+calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues', 'solvePnP', 'projectPoints']}
 
 
 white_list = makeWhiteList([core, imgproc, photo, aruco, calib3d])
