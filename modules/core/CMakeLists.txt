@@ -19,7 +19,7 @@ ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
 ocv_add_module(core
                OPTIONAL opencv_cudev
-               WRAP java python js)
+               WRAP java objc python js)
 
 set(extra_libs "")
 
@@ -79,6 +79,9 @@ if(HAVE_MALLOC_H)
 endif()
 if(HAVE_MEMALIGN)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MEMALIGN=1")
+endif()
+if(HAVE_VA_INTEL_OLD_HEADER)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "HAVE_VA_INTEL_OLD_HEADER")
 endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
