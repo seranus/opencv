@@ -1,0 +1,22 @@
+# Hashes of file build rules.
+304c43ef316121e7fe356e24c63d8e77 CMakeFiles/uninstall
+3aac12ede52dcd6d43716db35c69f44a bin/.eslintrc.json
+b28a19cc978e14c810a35463d7209d20 bin/haarcascade_frontalface_default.xml
+44a13c6d6073f682e10d1b74b922eb5b bin/opencv.js
+ecc42bb485282d7c6db8c6747b87554f bin/package.json
+426e05ae5eaafb1af601bf149afb79df bin/test_calib3d.js
+a2b255808dd38b26c10170664a4eae39 bin/test_features2d.js
+0b348e8e2a753c3fcb2f25ab1f079843 bin/test_imgproc.js
+9228fc9dc57b7d60d26bb27b56b4e7ac bin/test_mat.js
+03e885de262789dd6aa566abaa73ed36 bin/test_objdetect.js
+c2f79aa6b383c8c3127b336842952fbc bin/test_photo.js
+394206ddf31e7c7b23d29cd65a6746d3 bin/test_utils.js
+b8f0cbc3c090454bccf627c13ff966ae bin/test_video.js
+f18412c4d121dcab19181d7ebbd9ddf8 bin/tests.html
+3d1059a20f407d227ca531b6cf7d8130 bin/tests.js
+679155b408140a79726d2c46aaef90ff modules/core/opencl_kernels_core.cpp
+bfa2131a862cddf36b4aa4ce89c096ed modules/imgproc/opencl_kernels_imgproc.cpp
+fed14ded92480ebd60386b789afe33b2 modules/js/CMakeFiles/opencv.js
+fed14ded92480ebd60386b789afe33b2 modules/js/CMakeFiles/opencv_js_test
+8c9fcb797b61aaddcfb79af07a315d68 modules/js/bindings.cpp
+4a03b62e970c19e621711c87c37e5435 modules/video/opencl_kernels_video.cpp
